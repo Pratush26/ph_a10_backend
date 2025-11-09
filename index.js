@@ -35,14 +35,14 @@ async function connectDB() {
 app.get("/", (req, res) => res.send("Server is getting!"))
 app.get("/featured-foods", async (req, res) => {
     const db = await connectDB()
-    const result = await db.collection("foods").find().sort({expire_date : -1}).limit(6).toArray()
+    const result = await db.collection("foods").find({status: "available"}).sort({expire_date : -1}).limit(6).toArray()
     res.send(result)
 })
 
 //  Private api
 app.get("/foods", async (req, res) => {
     const db = await connectDB()
-    const result = await db.collection("foods").find().toArray()
+    const result = await db.collection("foods").find({status: "available"}).toArray()
     res.send(result)
 })
 app.get("/foods/:id", async (req, res) => {
