@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 
 dotenv.config();
 const app = express();
@@ -24,7 +24,7 @@ async function connectDB() {
     try {
         if (cachedDB) return cachedDB;
         await client.connect();
-        cachedDB = client.db("Plate_Share");
+        cachedDB = client.db("Plate_Share")
         return cachedDB;
     } catch (err) {
         console.error("Error from DB : ", err)
@@ -32,14 +32,35 @@ async function connectDB() {
 }
 
 //  Public api
-app.get("/", (req, res) => res.send("Server is getting!"));
+app.get("/", (req, res) => res.send("Server is getting!"))
+app.get("/featured-foods", async (req, res) => {
+    const db = await connectDB()
+    const result = await db.collection("foods").find().sort({expire_date : -1}).limit(6).toArray()
+    res.send(result)
+})
 
-app.get("/kk", async (req, res) => {
-    const db = await connectDB();
-    const result = await db.collection("foods").insertOne({name: "Biriyani", price: 120});
-    res.send(result);
+//  Private api
+app.get("/foods", async (req, res) => {
+    const db = await connectDB()
+    const result = await db.collection("foods").find().toArray()
+    res.send(result)
+})
+app.get("/foods/:id", async (req, res) => {
+    const db = await connectDB()
+    const result = await db.collection("foods").findOne({_id : new ObjectId(req.params.id)})
+    res.send(result)
+})
+app.post("/create-food", async (req, res) => {
+    const db = await connectDB()
+    const result = await db.collection("foods").insertOne(req.body)
+    res.send(result)
+})
+app.put("/update-food/:id", async (req, res) => {
+    const db = await connectDB()
+    const result = await db.collection("foods").updateOne({ _id: new ObjectId(req.params.id) }, { $set: req.body })
+    res.send(result)
 })
 
 app.listen(PORT, () =>
     console.log(`server running on port: ${PORT}`)
-);
+)
