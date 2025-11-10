@@ -86,10 +86,23 @@ app.get("/foods/:id", async (req, res) => {
     const result = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
     res.send(result)
 })
+app.get("/food-requests/:id", async (req, res) => {
+    const db = await connectDB()
+    const result = await db.collection("food-requests").find({ food_id: req.params.id }).toArray()
+    res.send(result)
+})
 app.post("/create-food", async (req, res) => {
     const db = await connectDB()
     const result = await db.collection("foods").insertOne(req.body)
     res.send(result)
+})
+app.post("/request-food", async (req, res) => {
+    const db = await connectDB()
+    const food = await db.collection("foods").findOne({ _id: new ObjectId(req.body.food_id) })
+    if(food.status.toLowerCase() === "available") {
+        const result = await db.collection("food-requests").insertOne(req.body)
+        res.send(result)
+    } else res.send("Food is not Available")
 })
 app.put("/update-food/:id", async (req, res) => {
     const db = await connectDB()
