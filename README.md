@@ -1,6 +1,6 @@
 # BACKEND of Plate Share
 
-This is a backend project of a food donation website named Plate share. Here, have different types of operations for create, update, read foods and change the food's status.
+This is a backend project of a food donation website named Plate share. Here, have CRUD operations for create, update, read foods, delete foods and change the food's status.
 
 ### Used Tech
 - Express

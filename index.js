@@ -34,7 +34,7 @@ const verifyToken = async (req, res, next) => {
     try {
         const decoded = await admin.auth().verifyIdToken(token);
         if (!decoded.email) return res.status(401).send("Unauthorized Access");
-        if (decoded.email !== req.params.email) return res.status(403).send("Forbidden access");
+        req.token_email = decoded.email
         next();
     } catch (err) {
         console.error(err);
@@ -65,70 +65,137 @@ async function connectDB() {
 //  Public api
 app.get("/", (req, res) => res.send("Server is getting!"))
 app.get("/featured-foods", async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("foods").find({ status: "available" }).sort({ expire_date: -1 }).limit(6).toArray()
-    res.send(result)
+    try {
+        const db = await connectDB()
+        const result = await db.collection("foods").find({ status: "available" }).sort({ expire_date: -1 }).limit(6).toArray()
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 
 //  Private api
 app.get("/foods", async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("foods").find({ status: "available" }).toArray()
-    res.send(result)
+    try {
+        const db = await connectDB()
+        const result = await db.collection("foods").find({ status: "available" }).toArray()
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 app.get("/my-foods/:email", verifyToken, async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("foods").find({ donator_email: req.params.email }).toArray()
-    res.send(result)
+    try {
+        if (req.token_email !== req.params.email) return res.status(403).send("Forbidden access");
+        const db = await connectDB()
+        const result = await db.collection("foods").find({ donator_email: req.params.email }).toArray()
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 app.get("/foods/:id", async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
-    res.send(result)
+    try {
+        const db = await connectDB()
+        const result = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 app.get("/food-requests/:id", async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("food-requests").find({ food_id: req.params.id }).toArray()
-    res.send(result)
+    try {
+        const db = await connectDB()
+        const result = await db.collection("food-requests").find({ food_id: req.params.id }).toArray()
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 app.put("/donate-foods/:id", async (req, res) => {
-    const db = await connectDB()
-    const check = await db.collection("foods").findOne({ _id: new ObjectId(req.body.foodId) })
-    if (check.status.toLowerCase() === "donated") {
-        res.send("Proccess unsuccessful, because this food is already donated.")
-    } else {
-        const result = await db.collection("foods").updateOne({ _id: new ObjectId(req.body.foodId) }, { $set: { status: "donated" } })
-        if(result.acknowledged) {
-        const request = await db.collection("food-requests").updateOne({ _id: new ObjectId(req.params.id) }, { $set: { status: "accepted" } })
-        res.send(request)
-        } else res.send("Something went wrong!")
+    try {
+        const db = await connectDB()
+        const check = await db.collection("foods").findOne({ _id: new ObjectId(req.body.foodId) })
+        if (check.status.toLowerCase() === "donated") {
+            res.send("Proccess unsuccessful, because this food is already donated.")
+        } else {
+            const result = await db.collection("foods").updateOne({ _id: new ObjectId(req.body.foodId) }, { $set: { status: "donated" } })
+            if (result.acknowledged) {
+                const request = await db.collection("food-requests").updateOne({ _id: new ObjectId(req.params.id) }, { $set: { status: "accepted" } })
+                res.send(request)
+            } else res.send("Something went wrong!")
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
+})
+app.delete("/delete-food/:id", verifyToken, async (req, res) => {
+    try {
+        const db = await connectDB()
+        const check = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
+        if (check.donator_email !== req.token_email) res.status(403).send("Forbidden access");
+        else {
+            const result = await db.collection("foods").deleteOne({ _id: new ObjectId(req.params.id) })
+            res.send(result)
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
     }
 })
 app.delete("/delete-request/:id", async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("food-requests").deleteOne({ _id: new ObjectId(req.params.id) })
-    res.send(result)
+    try {
+        const db = await connectDB()
+        const result = await db.collection("food-requests").deleteOne({ _id: new ObjectId(req.params.id) })
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 
 app.post("/create-food", async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("foods").insertOne(req.body)
-    res.send(result)
+    try {
+        const db = await connectDB()
+        const result = await db.collection("foods").insertOne(req.body)
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 app.post("/request-food", async (req, res) => {
-    const db = await connectDB()
-    const food = await db.collection("foods").findOne({ _id: new ObjectId(req.body.food_id) })
-    if (food.status.toLowerCase() === "available") {
-        const result = await db.collection("food-requests").insertOne(req.body)
-        res.send(result)
-    } else res.send("Food is not Available")
+    try {
+        const db = await connectDB()
+        const food = await db.collection("foods").findOne({ _id: new ObjectId(req.body.food_id) })
+        if (food.status.toLowerCase() === "available") {
+            const result = await db.collection("food-requests").insertOne(req.body)
+            res.send(result)
+        } else res.send("Food is not Available")
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
-app.put("/update-food/:id", async (req, res) => {
-    const db = await connectDB()
-    const result = await db.collection("foods").updateOne({ _id: new ObjectId(req.params.id) }, { $set: req.body })
-    res.send(result)
+app.put("/update-food/:id", verifyToken, async (req, res) => {
+    try {
+        const db = await connectDB()
+        const check = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
+        if (check.donator_email !== req.token_email) res.status(403).send("Forbidden access");
+        else {
+            const result = await db.collection("foods").updateOne({ _id: new ObjectId(req.params.id) }, { $set: req.body })
+            res.send(result)
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
 })
 
-app.listen(PORT, () =>
-    console.log(`server running on port: ${PORT}`)
-)
+app.listen(PORT, () => console.log(`server running on port: ${PORT}`))
