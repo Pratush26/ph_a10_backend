@@ -107,11 +107,33 @@ app.get("/foods/:id", async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.get("/food-requests/:id", async (req, res) => {
+app.get("/food-requestsById/:id", async (req, res) => {
     try {
         const db = await connectDB()
-        const result = await db.collection("food-requests").find({ food_id: req.params.id }).toArray()
+        const result = await db.collection("food-requests").find({ _id: new ObjectId(req.params.id) }).toArray()
         res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
+})
+app.get("/food-reqs-donatorEmail/:email", async (req, res) => {
+    try {
+        const db = await connectDB()
+        const result = await db.collection("food-requests").find({ donator_email: req.params.email }).toArray()
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
+})
+app.get("/food-requestsByEmail/:email", async (req, res) => {
+    try {
+        const db = await connectDB();
+        const requests = await db.collection("food-requests").find({ email: req.params.email }).toArray();
+        const foodIds = requests.map(request => new ObjectId(request.food_id));
+        const foods = await db.collection("foods").find({ _id: { $in: foodIds } }).toArray();
+        res.send({ requests, foods });
     } catch (err) {
         console.error(err);
         res.status(500).send("Internal Server Error");
@@ -153,7 +175,7 @@ app.delete("/delete-request/:id", async (req, res) => {
     try {
         const db = await connectDB()
         const check = await db.collection("food-requests").findOne({ _id: new ObjectId(req.params.id) })
-        if(check.status.toLowerCase() === "accepted") await db.collection("foods").updateOne({ _id: new ObjectId(check.food_id) }, { $set: { status: "available" } })
+        if (check.status.toLowerCase() === "accepted") await db.collection("foods").updateOne({ _id: new ObjectId(check.food_id) }, { $set: { status: "available" } })
         const result = await db.collection("food-requests").deleteOne({ _id: new ObjectId(req.params.id) })
         res.send(result)
     } catch (err) {
