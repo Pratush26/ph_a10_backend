@@ -122,7 +122,7 @@ app.put("/donate-foods/:id", async (req, res) => {
         const db = await connectDB()
         const check = await db.collection("foods").findOne({ _id: new ObjectId(req.body.foodId) })
         if (check.status.toLowerCase() === "donated") {
-            res.send("Proccess unsuccessful, because this food is already donated.")
+            res.send("This food is already donated.")
         } else {
             const result = await db.collection("foods").updateOne({ _id: new ObjectId(req.body.foodId) }, { $set: { status: "donated" } })
             if (result.acknowledged) {
@@ -152,6 +152,8 @@ app.delete("/delete-food/:id", verifyToken, async (req, res) => {
 app.delete("/delete-request/:id", async (req, res) => {
     try {
         const db = await connectDB()
+        const check = await db.collection("food-requests").findOne({ _id: new ObjectId(req.params.id) })
+        if(check.status.toLowerCase() === "accepted") await db.collection("foods").updateOne({ _id: new ObjectId(check.food_id) }, { $set: { status: "available" } })
         const result = await db.collection("food-requests").deleteOne({ _id: new ObjectId(req.params.id) })
         res.send(result)
     } catch (err) {
