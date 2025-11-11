@@ -91,6 +91,25 @@ app.get("/food-requests/:id", async (req, res) => {
     const result = await db.collection("food-requests").find({ food_id: req.params.id }).toArray()
     res.send(result)
 })
+app.put("/donate-foods/:id", async (req, res) => {
+    const db = await connectDB()
+    const check = await db.collection("foods").findOne({ _id: new ObjectId(req.body.foodId) })
+    if (check.status.toLowerCase() === "donated") {
+        res.send("Proccess unsuccessful, because this food is already donated.")
+    } else {
+        const result = await db.collection("foods").updateOne({ _id: new ObjectId(req.body.foodId) }, { $set: { status: "donated" } })
+        if(result.acknowledged) {
+        const request = await db.collection("food-requests").updateOne({ _id: new ObjectId(req.params.id) }, { $set: { status: "accepted" } })
+        res.send(request)
+        } else res.send("Something went wrong!")
+    }
+})
+app.delete("/delete-request/:id", async (req, res) => {
+    const db = await connectDB()
+    const result = await db.collection("food-requests").deleteOne({ _id: new ObjectId(req.params.id) })
+    res.send(result)
+})
+
 app.post("/create-food", async (req, res) => {
     const db = await connectDB()
     const result = await db.collection("foods").insertOne(req.body)
@@ -99,7 +118,7 @@ app.post("/create-food", async (req, res) => {
 app.post("/request-food", async (req, res) => {
     const db = await connectDB()
     const food = await db.collection("foods").findOne({ _id: new ObjectId(req.body.food_id) })
-    if(food.status.toLowerCase() === "available") {
+    if (food.status.toLowerCase() === "available") {
         const result = await db.collection("food-requests").insertOne(req.body)
         res.send(result)
     } else res.send("Food is not Available")
