@@ -29,9 +29,9 @@ admin.initializeApp({
 });
 
 const verifyToken = async (req, res, next) => {
-    const token = req.headers.authorization.split(" ")[1];
-    if (!token) return res.status(401).send("Unauthorized Access");
+    if (!req?.headers?.authorization) return res.status(401).send("Unauthorized Access");
     try {
+        const token = req?.headers?.authorization?.split(" ")[1];
         const decoded = await admin.auth().verifyIdToken(token);
         if (!decoded.email) return res.status(401).send("Unauthorized Access");
         req.token_email = decoded.email
@@ -76,7 +76,7 @@ app.get("/featured-foods", async (req, res) => {
 })
 
 //  Private api
-app.get("/foods", async (req, res) => {
+app.get("/foods", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
         const result = await db.collection("foods").find({ status: "available" }).toArray()
@@ -97,7 +97,7 @@ app.get("/my-foods/:email", verifyToken, async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.get("/foods/:id", async (req, res) => {
+app.get("/foods/:id", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
         const result = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
@@ -107,17 +107,17 @@ app.get("/foods/:id", async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.get("/food-requestsById/:id", async (req, res) => {
+app.get("/food-requestsById/:id", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
-        const result = await db.collection("food-requests").find({ _id: new ObjectId(req.params.id) }).toArray()
+        const result = await db.collection("food-requests").find({ food_id: req.params.id }).toArray()
         res.send(result)
     } catch (err) {
         console.error(err);
         res.status(500).send("Internal Server Error");
     }
 })
-app.get("/food-reqs-donatorEmail/:email", async (req, res) => {
+app.get("/food-reqs-donatorEmail/:email", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
         const result = await db.collection("food-requests").find({ donator_email: req.params.email }).toArray()
@@ -127,7 +127,7 @@ app.get("/food-reqs-donatorEmail/:email", async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.get("/food-requestsByEmail/:email", async (req, res) => {
+app.get("/food-requestsByEmail/:email", verifyToken, async (req, res) => {
     try {
         const db = await connectDB();
         const requests = await db.collection("food-requests").find({ email: req.params.email }).toArray();
@@ -139,7 +139,7 @@ app.get("/food-requestsByEmail/:email", async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.put("/donate-foods/:id", async (req, res) => {
+app.put("/donate-foods/:id", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
         const check = await db.collection("foods").findOne({ _id: new ObjectId(req.body.foodId) })
@@ -171,7 +171,7 @@ app.delete("/delete-food/:id", verifyToken, async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.delete("/delete-request/:id", async (req, res) => {
+app.delete("/delete-request/:id", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
         const check = await db.collection("food-requests").findOne({ _id: new ObjectId(req.params.id) })
@@ -184,7 +184,7 @@ app.delete("/delete-request/:id", async (req, res) => {
     }
 })
 
-app.post("/create-food", async (req, res) => {
+app.post("/create-food", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
         const result = await db.collection("foods").insertOne(req.body)
@@ -194,7 +194,7 @@ app.post("/create-food", async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.post("/request-food", async (req, res) => {
+app.post("/request-food", verifyToken, async (req, res) => {
     try {
         const db = await connectDB()
         const food = await db.collection("foods").findOne({ _id: new ObjectId(req.body.food_id) })
