@@ -67,7 +67,7 @@ app.get("/", (req, res) => res.send("Server is getting!"))
 app.get("/featured-foods", async (req, res) => {
     try {
         const db = await connectDB()
-        const result = await db.collection("foods").find({ status: "available" }).sort({ expire_date: -1 }).limit(6).toArray()
+        const result = await db.collection("foods").find({ status: "available" }).sort({ expire_date: -1 }).limit(8).toArray()
         res.send(result)
     } catch (err) {
         console.error(err);
@@ -75,8 +75,7 @@ app.get("/featured-foods", async (req, res) => {
     }
 })
 
-//  Private api
-app.get("/foods", verifyToken, async (req, res) => {
+app.get("/foods", async (req, res) => {
     try {
         const db = await connectDB()
         const result = await db.collection("foods").find({ status: "available" }).toArray()
@@ -86,21 +85,23 @@ app.get("/foods", verifyToken, async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 })
-app.get("/my-foods/:email", verifyToken, async (req, res) => {
+app.get("/foods/:id", async (req, res) => {
     try {
-        if (req.token_email !== req.params.email) return res.status(403).send("Forbidden access");
         const db = await connectDB()
-        const result = await db.collection("foods").find({ donator_email: req.params.email }).toArray()
+        const result = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
         res.send(result)
     } catch (err) {
         console.error(err);
         res.status(500).send("Internal Server Error");
     }
 })
-app.get("/foods/:id", verifyToken, async (req, res) => {
+
+//  Private api
+app.get("/my-foods/:email", verifyToken, async (req, res) => {
     try {
+        if (req.token_email !== req.params.email) return res.status(403).send("Forbidden access");
         const db = await connectDB()
-        const result = await db.collection("foods").findOne({ _id: new ObjectId(req.params.id) })
+        const result = await db.collection("foods").find({ donator_email: req.params.email }).toArray()
         res.send(result)
     } catch (err) {
         console.error(err);
